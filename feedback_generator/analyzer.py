@@ -1,29 +1,25 @@
 from flask import Flask, jsonify, request
 from afinn import Afinn
 from flask_cors import CORS, cross_origin
+import requests
+import json
 
 app = Flask(__name__)
 CORS(app)
 afinn = Afinn()
 db="https://919hj0d72g.execute-api.us-west-2.amazonaws.com/prod/reviews"
 
-reviews = [
-    {
-        'tripId': "1",
-        'comments': u'Good experience in booking',
-        'score': 3.0
-    },
-    {
-        'tripId': "2",
-        'comments': u'Worst booking',
-        'score': -3.0
-    }
-]
-
 @app.route('/analysis', methods=['GET'])
 def get_sentiments():
     neg,pos,neu = 0,0,0
-    for review in reviews:
+    url = db + "?TableName=UserReviews"
+    
+    reviews = requests.get(url)
+
+    res = reviews.json()
+
+    
+    for review in res['Items']:       
         if(review['score'] < 0):
             neg += 1
         elif(review['score']> 0):
@@ -42,19 +38,33 @@ def get_sentiments():
 
 @app.route('/review', methods=['POST'])
 def set_sentiments():
-    print "Reached asdlhasodhajshdoash odhasodhoasi dias;";
+
     print request.json
 
-    print "APPLE BANACNAa";
     if not request.json:
         abort(400)
 
-    msg = request.json
+    msg = {
+        'TableName': u'UserReviews',
+        'Item':{
+            'TripId': u'',
+            'Comments':u'',
+            'score': 0
+        }
+    }
+
+
+    if(request.json['comments']):
+        msg['Item']['TripId'] = request.json['tripId']
+        msg['Item']['Comments'] = request.json['comments']
+        msg['Item']['score'] = find_score(request.json['comments'])
+
+
+    r = requests.post(db, data=json.dumps(msg))
+
+    print msg, "\n";
+    print(r.status_code, r.reason)
     
-    if msg['comments']:
-        msg['score'] = find_score(msg['comments'])    
-    
-    reviews.append(msg)
 
     return jsonify({'review': msg}), 201
 
