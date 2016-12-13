@@ -12,6 +12,7 @@ db="https://919hj0d72g.execute-api.us-west-2.amazonaws.com/prod/reviews"
 @app.route('/analysis', methods=['GET'])
 def get_sentiments():
     neg,pos,neu = 0,0,0
+    max_neg, max_pos = 0,0
     url = db + "?TableName=UserReviews"
     
     reviews = requests.get(url)
@@ -19,19 +20,36 @@ def get_sentiments():
     res = reviews.json()
 
     
-    for review in res['Items']:       
-        if(review['score'] < 0):
+    for review in res['Items']:   
+        score = review['score']    
+        if(score < 0):
             neg += 1
-        elif(review['score']> 0):
+        elif(score > 0):
             pos += 1
         else:
             neu += 1
 
+    sorted_review = sorted(res['Items'],key=lambda x:x['score'])
+    
+
+
     data = {
         "neg": neg,
         "pos": pos,
-        "neu": neu
+        "neu": neu,
+        "top_pos": [],
+        "top_neg": []
     }
+
+    
+    if(sorted_review[0]['Comments']):
+        data["top_neg"].append(sorted_review[0]['Comments'])
+
+    if(sorted_review[1]['Comments']):
+        data["top_neg"].append(sorted_review[1]['Comments'])
+    
+    data["top_pos"].append(sorted_review[-1]['Comments'])
+    data["top_pos"].append(sorted_review[-2]['Comments'])
 
     return jsonify(data), 200 
 
